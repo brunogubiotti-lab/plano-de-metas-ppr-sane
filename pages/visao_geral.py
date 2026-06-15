@@ -89,76 +89,96 @@ def make_donut(valor: float, meta: float) -> go.Figure:
 
 def make_gauge(valor: float, meta: float, max_val: float) -> go.Figure:
     """
-    Cria um velocímetro (gauge) semicircular.
-
-    Plotly oferece go.Indicator com mode="gauge+number".
-    Aqui usamos apenas mode="gauge" para ter controle total
-    sobre a anotação central.
+    Cria um velocímetro (gauge) semicircular idêntico à imagem de referência:
+    - Fundo branco limpo (sem faixas coloridas)
+    - Arco de fundo cinza claro fino
+    - Barra azul sólida preenchendo até o valor
+    - Linha verde marcando a meta
+    - Ticks simples nas extremidades e meio
+    - Valor em negrito no centro, "Meta X" embaixo
 
     Parâmetros
     ----------
     valor   : float — valor atual
-    meta    : float — meta (exibida como marcação no gauge)
-    max_val : float — valor máximo do eixo do gauge
+    meta    : float — meta (linha verde de referência)
+    max_val : float — valor máximo do eixo
     """
-    fig = go.Figure(go.Indicator(
-        mode="gauge",
-        value=valor,
-        gauge=dict(
-            axis=dict(
-                range=[0, max_val],
-                tickwidth=1,
-                tickcolor="#D1D5DB",
-                tickfont=dict(size=9, color="#9CA3AF"),
-                nticks=5,
-            ),
-            bar=dict(color=COR_AZUL, thickness=0.25),   # ponteiro azul
-            bgcolor="white",
-            borderwidth=0,
-            steps=[
-                # Faixas coloridas de fundo do gauge
-                dict(range=[0, meta * 0.6],  color="#FEE2E2"),  # vermelho-claro
-                dict(range=[meta * 0.6, meta], color="#FEF9C3"),  # amarelo-claro
-                dict(range=[meta, max_val], color="#DCFCE7"),   # verde-claro
-            ],
-            threshold=dict(
-                line=dict(color=COR_VERDE, width=3),
-                thickness=0.75,
-                value=meta,   # marca a meta com linha verde
-            ),
-        ),
-    ))
-
-    # Anotação com valor formatado no centro do gauge
+    # Formata valor e meta para exibição (milhares com ponto brasileiro)
     if valor >= 1000:
-        # Formata milhares com ponto: 125430 → 125.430
         valor_fmt = f"{valor:,.0f}".replace(",", ".")
     else:
         valor_fmt = str(valor)
 
+    meta_fmt = f"{meta:,.0f}".replace(",", ".") if meta >= 1000 else str(int(meta))
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge",           # só o gauge, sem número automático do plotly
+        value=valor,
+        gauge=dict(
+            axis=dict(
+                range=[0, max_val],
+                # Ticks só nas posições-chave: 0, metade, máximo
+                tickvals=[0, max_val * 0.25, max_val * 0.5, max_val * 0.75, max_val],
+                ticktext=[
+                    "0",
+                    _fmt_tick(max_val * 0.25),
+                    _fmt_tick(max_val * 0.5),
+                    _fmt_tick(max_val * 0.75),
+                    _fmt_tick(max_val),
+                ],
+                tickwidth=1,
+                tickcolor="#D1D5DB",
+                tickfont=dict(size=9, color="#9CA3AF", family="Inter"),
+            ),
+            # Barra azul sólida — espessura 0.4 dá visual compacto como na ref.
+            bar=dict(color=COR_AZUL, thickness=0.4),
+            # Fundo do arco cinza claríssimo — SEM faixas coloridas
+            bgcolor="#F3F4F6",
+            borderwidth=0,
+            steps=[],           # lista vazia = sem faixas coloridas
+            # Linha verde na posição da meta
+            threshold=dict(
+                line=dict(color=COR_VERDE, width=3),
+                thickness=0.8,
+                value=meta,
+            ),
+        ),
+    ))
+
+    # Valor em negrito no centro do semicírculo
     fig.add_annotation(
         text=f"<b>{valor_fmt}</b>",
-        x=0.5, y=0.18,
-        font=dict(size=16, color=COR_NAVY, family="Inter"),
+        x=0.5, y=0.15,
+        font=dict(size=17, color=COR_NAVY, family="Inter"),
         showarrow=False,
         xanchor="center",
     )
 
-    meta_fmt = f"{meta:,.0f}".replace(",", ".") if meta >= 1000 else str(int(meta))
+    # "Meta X" em cinza abaixo do valor
     fig.add_annotation(
         text=f"Meta {meta_fmt}",
-        x=0.5, y=0.02,
+        x=0.5, y=-0.05,
         font=dict(size=10, color="#6B7280", family="Inter"),
         showarrow=False,
         xanchor="center",
     )
 
     fig.update_layout(
-        margin=dict(t=0, b=0, l=10, r=10),
+        margin=dict(t=10, b=30, l=20, r=20),
         paper_bgcolor="rgba(0,0,0,0)",
-        height=150,
+        height=160,
     )
     return fig
+
+
+def _fmt_tick(val: float) -> str:
+    """
+    Formata um valor de tick do gauge de forma compacta.
+    Ex: 150000 → '150k' | 75 → '75'
+    """
+    if val >= 1000:
+        return f"{int(val/1000)}k"
+    return str(int(val))
 
 
 # ══════════════════════════════════════════════════════════
