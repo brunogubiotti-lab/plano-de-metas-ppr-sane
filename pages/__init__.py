@@ -1,0 +1,3 @@
+# pages/__init__.py
+# Torna 'pages' um pacote Python.
+# Permite: from pages import visao_geral, indicadores, ...
